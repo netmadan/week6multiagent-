@@ -3,11 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="0; url=src/public/index.html" />
     <title>Vibe Chat</title>
+    <link rel="stylesheet" href="src/public/styles.css" />
   </head>
   <body>
-    <p>Opening Vibe Chat...</p>
-    <p><a href="src/public/index.html">Open Vibe Chat</a></p>
+    <div class="background-orb orb-1"></div>
+    <div class="background-orb orb-2"></div>
+    <div class="background-orb orb-3"></div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <p class="eyebrow">Agents</p>
+          <h2>Live roster</h2>
+        </div>
+        <div id="agent-list" class="agent-list" aria-label="Agent controls"></div>
+      </aside>
+
+      <div class="chat-shell">
+        <header class="topbar">
+          <div class="brand-wrap">
+            <div class="brand-badge">✦</div>
+            <div>
+              <p class="eyebrow">Classroom AI</p>
+              <h1>Vibe Chat</h1>
+            </div>
+          </div>
+        </header>
+
+        <main class="chat-panel">
+          <div id="messages" class="messages" aria-live="polite"></div>
+          <form id="chat-form" class="composer">
+            <input id="message-input" type="text" placeholder="Ask something fun or thoughtful..." autocomplete="off" required />
+            <button type="submit">Send</button>
+          </form>
+        </main>
+      </div>
+
+      <aside class="trace-panel">
+        <div class="sidebar-header">
+          <p class="eyebrow">Trace</p>
+          <h2>Routing log</h2>
+        </div>
+        <div id="trace-list" class="trace-list" aria-live="polite"></div>
+      </aside>
+    </div>
+
+    <script src="src/public/app.js"></script>
   </body>
 </html>
