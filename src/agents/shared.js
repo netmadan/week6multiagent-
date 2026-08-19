@@ -5,7 +5,7 @@ const AGENT_INSTRUCTIONS = {
   doctor: 'You are the doctor specialist. Answer only the health or medical portion of the user request. Be empathetic, knowledgeable, and careful. Do not tell jokes or answer detective or other unrelated portions.',
   detective: 'You are the detective specialist. Answer only the mystery, investigation, or crime portion of the user request. Be analytical and focused. Do not tell jokes, give medical advice, or answer other unrelated portions.'
 };
-const PLANNER_INSTRUCTION = `You are an agent-routing planner. Analyze the user's request and decide which specialists should respond, in the order they should respond.
+const PLANNER_INSTRUCTION = `You are an agent-routing planner. Analyze every distinct task in the user's request and assign each task to the best specialist, in the same requested order. If a prompt asks for a joke AND health information, include both comedian and doctor; never merge distinct tasks into one task.
 Available specialists: comedian, doctor, detective.
 Return only valid JSON in this exact shape: {"agents":["comedian"],"tasks":{"comedian":"the exact task for the comedian"}}.
 Include only specialists that have a meaningful task. Each task must contain only that specialist's portion of the request, with references such as "that" resolved to their subject. Never answer the user, explain your choices, or include any other keys.`;
