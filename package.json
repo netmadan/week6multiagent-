@@ -1,0 +1,22 @@
+{
+  "name": "week6multiagent-chat",
+  "version": "1.0.0",
+  "description": "Simple chat application with live LLM support",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "chat",
+    "llm",
+    "express",
+    "multi-agent",
+    "proxy"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
