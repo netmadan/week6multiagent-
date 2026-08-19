@@ -6,6 +6,13 @@ const traceListEl = document.getElementById('trace-list');
 
 const PROXY_URL = 'https://vibe-proxy-gqv4.onrender.com/v1/chat/completions';
 const PROXY_AUTH_TOKEN = 'sk-vibe-summer-2026';
+const STATIC_SITE = window.location.hostname.endsWith('github.io');
+const AGENT_INSTRUCTIONS = {
+  comedian: 'You are the comedian specialist. Answer only the joke or humor portion of the user request. Do not answer medical, detective, or other unrelated portions. Be playful and lighthearted.',
+  doctor: 'You are the doctor specialist. Answer only the health or medical portion of the user request. Be empathetic, knowledgeable, and careful. Do not tell jokes or answer detective or other unrelated portions.',
+  detective: 'You are the detective specialist. Answer only the mystery, investigation, or crime portion of the user request. Be analytical and focused. Do not tell jokes, give medical advice, or answer other unrelated portions.'
+};
+const PLANNER_INSTRUCTION = 'You are an agent-routing planner. Analyze the user request and decide which specialists should respond, in order. Available specialists: comedian, doctor, detective. Return only valid JSON in this exact shape: {"agents":["comedian"],"tasks":{"comedian":"the exact task for the comedian"}}. Include only specialists with a meaningful task. Each task must contain only that specialist portion, with references such as that resolved to their subject. Never answer the user or explain your choices.';
 
 const AGENT_DEFAULTS = {
   comedian: true,
@@ -74,6 +81,11 @@ function renderAgentList() {
       agentState[agentName] = nextState;
       wrapper.classList.toggle('disabled', !nextState);
 
+      if (STATIC_SITE) {
+        localStorage.setItem('agentState', JSON.stringify(agentState));
+        return;
+      }
+
       const response = await fetch('/api/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,6 +118,10 @@ async function getAgentReply(userMessage) {
   addTraceEntry('Prompt', userMessage);
   addTraceEntry('Routing', disabledAgents.length ? `Skipped: ${disabledAgents.join(', ')}` : 'No agents skipped');
 
+  if (STATIC_SITE) {
+    return getStaticAgentReply(userMessage, disabledAgents);
+  }
+
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -128,6 +144,74 @@ async function getAgentReply(userMessage) {
     reply: data.reply,
     agent: data.agent || responses[0]?.agent || null,
     agents: data.agents || responses.map(({ agent }) => agent),
+    responses
+  };
+}
+
+async function callStaticProxy(message, systemInstruction) {
+  const response = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${PROXY_AUTH_TOKEN}`
+    },
+    body: JSON.stringify({
+      model: 'class-chat-model',
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: message }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('The language model could not be reached.');
+  }
+
+  const data = await response.json();
+  return data?.choices?.[0]?.message?.content || '';
+}
+
+function parseStaticPlan(text, disabledAgents) {
+  const jsonText = text.match(/\{[\s\S]*\}/)?.[0];
+  if (!jsonText) {
+    return { agents: [], tasks: {} };
+  }
+
+  try {
+    const plan = JSON.parse(jsonText);
+    const disabled = new Set(disabledAgents);
+    const agents = Array.isArray(plan.agents)
+      ? plan.agents.filter((agent, index, list) => ['comedian', 'doctor', 'detective'].includes(agent)
+        && !disabled.has(agent)
+        && list.indexOf(agent) === index
+        && typeof plan.tasks?.[agent] === 'string'
+        && plan.tasks[agent].trim())
+      : [];
+    return {
+      agents,
+      tasks: Object.fromEntries(agents.map((agent) => [agent, plan.tasks[agent].trim()]))
+    };
+  } catch (error) {
+    return { agents: [], tasks: {} };
+  }
+}
+
+async function getStaticAgentReply(userMessage, disabledAgents) {
+  const plannerText = await callStaticProxy(userMessage, PLANNER_INSTRUCTION);
+  const plan = parseStaticPlan(plannerText, disabledAgents);
+  addTraceEntry('Selected', plan.agents.join(', ') || 'None');
+
+  const responses = [];
+  for (const agent of plan.agents) {
+    const reply = await callStaticProxy(plan.tasks[agent], AGENT_INSTRUCTIONS[agent]);
+    responses.push({ agent, reply });
+  }
+
+  return {
+    reply: responses.map(({ agent, reply }) => `[${agent}] ${reply}`).join('\n\n'),
+    agent: plan.agents[0] || null,
+    agents: plan.agents,
     responses
   };
 }
@@ -169,6 +253,16 @@ async function sendMessage(event) {
 }
 
 async function loadAgentStateFromServer() {
+  if (STATIC_SITE) {
+    try {
+      syncAgentState(JSON.parse(localStorage.getItem('agentState') || '{}'));
+    } catch (error) {
+      syncAgentState(AGENT_DEFAULTS);
+    }
+    renderAgentList();
+    return;
+  }
+
   try {
     const response = await fetch('/api/agents');
     if (!response.ok) {
