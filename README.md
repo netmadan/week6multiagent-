@@ -2,7 +2,7 @@
 
 week6multiagent🦾
 
-A small Node.js chat app that now routes prompts to a specialist agent using a keyword-based orchestrator. The server stays as the main application entrypoint, while the actual response generation is delegated to separate modules for a comedian, doctor, and detective.
+A small Node.js chat app that routes prompts through an LLM planner and delegates response generation to separate comedian, doctor, and detective specialists.
 
 ## What changed
 
